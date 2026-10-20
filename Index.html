@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyTOKO v2.0 - Belanja Online</title>
+<style>
+  /* Order actions */
+.order-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.order-action-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: 0.3s;
+}
+.btn-cancel {
+  background: #ffe0e5;
+  color: #ff4757;
+}
+.btn-cancel:hover { background: #ffccd5; }
+.btn-confirm {
+  background: #d4edda;
+  color: #155724;
+}
+.btn-confirm:hover { background: #c3e6cb; }
+.btn-track {
+  background: #e0e7ff;
+  color: #667eea;
+}
+.btn-track:hover { background: #c7d2fe; }
+.order-status.cancelled { background: #ffe0e5; color: #ff4757; }
+.order-status.shipped { background: #fff3cd; color: #856404; }
+.order-status.completed { background: #d4edda; color: #155724; }
+
+/* Timeline tracking */
+.timeline {
+  position: relative;
+  padding-left: 30px;
+  margin: 15px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #ddd;
+}
+.timeline-step {
+  position: relative;
+  padding-bottom: 18px;
+  font-size: 13px;
+}
+.timeline-step::before {
+  content: '';
+  position: absolute;
+  left: -27px;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ddd;
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px #ddd;
+}
+.timeline-step.done::before {
+  background: #2ed573;
+  box-shadow: 0 0 0 1px #2ed573;
+}
+.timeline-step.done { color: #2ed573; font-weight: 600; }
+.timeline-step.current::before {
+  background: #667eea;
+  box-shadow: 0 0 0 3px rgba(102,126,234,0.3);
+  animation: pulse 1.5s infinite;
+}
+.timeline-step.current { color: #667eea; font-weight: 600; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(102,126,234,0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(102,126,234,0.1); }
+}
+  /* ===== HEADER ===== */
+  header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .logo { font-size: 24px; font-weight: bold; cursor: pointer; }
+  .header-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .header-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.3s;
+    position: relative;
+  }
+  .header-btn:hover { background: rgba(255,255,255,0.35); }
+  .cart-count {
+    background: #ff4757;
+    border-radius: 50%;
+    padding: 2px 8px;
+    font-size: 12px;
+    margin-left: 5px;
+  }
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.2);
+    padding: 6px 14px;
+    border-radius: 25px;
+    font-size: 14px;
+  }
+  .user-avatar {
+    width: 28px; height: 28px;
+    background: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  /* ===== SEARCH & FILTER (VERSI RAPI) ===== */
+.toolbar {
+  padding: 20px 30px 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Bikin kotak search fleksibel, tapi punya batas minimal */
+.search-box {
+  flex: 1;
+  min-width: 280px; 
+  position: relative;
+}
+
+/* Perbaiki padding kiri agar teks tidak nabrak ikon */
+.search-box input {
+  width: 100%;
+  padding: 12px 20px 12px 48px; /* Padding kiri diperbesar jadi 48px */
+  border: 2px solid #ddd;
+  border-radius: 25px;
+  font-size: 15px;
+  outline: none;
+  transition: 0.3s;
+  background: white;
+}
+
+.search-box input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+/* Posisi ikon kaca pembesar disesuaikan */
+.search-box::before {
+  content: "🔍";
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  pointer-events: none; /* Agar ikon tidak menghalangi saat kotak diklik */
+}
+
+/* Perbaiki tampilan dropdown urutkan */
+.filter-select {
+  padding: 12px 20px;
+  border: 2px solid #ddd;
+  border-radius: 25px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  background: white;
+  transition: 0.3s;
+  color: #333;
+  font-weight: 500;
+}
+
+.filter-select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+/* Khusus layar HP, dropdown biar full width */
+@media (max-width: 600px) {
+  .filter-select {
+    width: 100%;
+  }
+}
+  .filter-select {
+    padding: 12px 18px;
+    border: 2px solid #ddd;
+    border-radius: 25px;
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    background: white;
+    transition: 0.3s;
+  }
+  .filter-select:focus { border-color: #667eea; }
+
+  /* ===== CATEGORIES ===== */
+  .categories {
+    padding: 5px 30px 15px;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .cat-btn {
+    padding: 8px 18px;
+    border: 2px solid #ddd;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+    transition: 0.3s;
+    font-weight: 500;
+  }
+  .cat-btn:hover { border-color: #667eea; }
+  .cat-btn.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: transparent;
+  }
+
+  /* ===== PRODUCTS ===== */
+  .products {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 10px 30px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .product-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+    position: relative;
+  }
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .product-img {
+    width: 100%;
+    height: 180px;
+    background: linear-gradient(135deg, #e0e7ff, #f3e8ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    position: relative;
+  }
+  .badge-discount {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: #ff4757;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .badge-new {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: #2ed573;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .product-info { padding: 15px; }
+  .product-category {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+  .product-name { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .product-rating { font-size: 12px; color: #ffa502; margin-bottom: 8px; }
+  .product-price {
+    color: #667eea;
+    font-weight: bold;
+    font-size: 17px;
+    margin-bottom: 4px;
+  }
+  .product-price-old {
+    color: #999;
+    font-size: 13px;
+    text-decoration: line-through;
+    margin-bottom: 12px;
+  }
+  .add-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+  }
+  .add-btn:hover { opacity: 0.9; transform: scale(1.02); }
+
+  /* ===== CART SIDEBAR ===== */
+  .cart-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    opacity: 0; visibility: hidden;
+    transition: 0.3s;
+    z-index: 200;
+  }
+  .cart-overlay.active { opacity: 1; visibility: visible; }
+  .cart-sidebar {
+    position: fixed;
+    right: -420px;
+    top: 0;
+    width: 400px;
+    max-width: 95%;
+    height: 100%;
+    background: white;
+    z-index: 300;
+    transition: right 0.3s;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -5px 0 20px rgba(0,0,0,0.2);
+  }
+  .cart-sidebar.active { right: 0; }
+  .cart-header {
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .close-btn {
+    background: none; border: none; color: white;
+    font-size: 24px; cursor: pointer;
+  }
+  .cart-items { flex: 1; overflow-y: auto; padding: 15px; }
+  .cart-item {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+  }
+  .cart-item-icon {
+    font-size: 28px;
+    background: #f3e8ff;
+    width: 50px; height: 50px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-name { font-weight: 600; font-size: 14px; }
+  .cart-item-price { color: #667eea; font-size: 13px; }
+  .qty-controls { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+  .qty-btn {
+    background: #667eea; color: white; border: none;
+    width: 24px; height: 24px; border-radius: 5px; cursor: pointer;
+    font-weight: bold;
+  }
+  .remove-btn {
+    background: #ff4757; color: white; border: none;
+    padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
+  }
+  .cart-footer { padding: 20px; border-top: 2px solid #eee; }
+  .total { font-size: 20px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; }
+  .total span:last-child { color: #667eea; }
+  .checkout-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .checkout-btn:hover { opacity: 0.9; }
+  .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 20px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-header h2 { font-size: 20px; }
+  .modal-body { padding: 20px; }
+  .modal-close {
+    background: none; border: none;
+    font-size: 24px; cursor: pointer; color: #999;
+  }
+
+  /* Product Detail */
+  .detail-img {
+    font-size: 100px;
+    text-align: center;
+    background: linear-gradient(135deg, #e0e7ff, #f3e8ff);
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 20px;
+  }
+  .detail-name { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+  .detail-category { color: #999; font-size: 13px; text-transform: uppercase; margin-bottom: 15px; }
+  .detail-price { color: #667eea; font-size: 26px; font-weight: bold; margin-bottom: 10px; }
+  .detail-desc { color: #666; line-height: 1.6; margin-bottom: 20px; }
+  .detail-actions { display: flex; gap: 10px; }
+
+  /* Form */
+  .form-group { margin-bottom: 15px; }
+  .form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #555;
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    transition: 0.3s;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: #667eea;
+  }
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-secondary {
+    background: #f1f2f6;
+    color: #333;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+  }
+  .tab-switch {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: #f1f2f6;
+    padding: 5px;
+    border-radius: 12px;
+  }
+  .tab-switch button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #666;
+    transition: 0.3s;
+  }
+  .tab-switch button.active {
+    background: white;
+    color: #667eea;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+
+  /* Order History */
+  .order-card {
+    border: 2px solid #eee;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+  }
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #999;
+  }
+  .order-status {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #d4edda;
+    color: #155724;
+  }
+  .order-item-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    padding: 5px 0;
+    color: #555;
+  }
+  .order-total {
+    border-top: 1px solid #eee;
+    margin-top: 10px;
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    color: #667eea;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #2ed573; color: white;
+    padding: 12px 25px; border-radius: 25px;
+    opacity: 0; transition: 0.3s; z-index: 600;
+    font-weight: 600;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+  }
+  .toast.error { background: #ff4757; }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Wishlist heart */
+  .heart-btn {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    background: white;
+    border: none;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: 0.3s;
+    z-index: 2;
+  }
+  .heart-btn:hover { transform: scale(1.1); }
+  .heart-btn.active { background: #ffe0e5; }
+
+  /* Empty */
+  .empty-products {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+    font-size: 16px;
+  }
+
+  @media(max-width: 600px) {
+    .products { padding: 10px 15px 40px; gap: 15px; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); }
+    header { padding: 12px 15px; }
+    .toolbar { padding: 15px; }
+    .categories { padding: 5px 15px 15px; }
+    .product-img { height: 130px; font-size: 45px; }
+    .product-info { padding: 12px; }
+    .product-name { font-size: 13px; }
+    .product-price { font-size: 15px; }
+    .logo { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="logo" onclick="showHome()">🛍️ MyTOKO</div>
+  <div class="header-right">
+    <div class="user-info" id="userInfo" style="display:none">
+      <div class="user-avatar">👤</div>
+      <span id="userName">User</span>
+    </div>
+    <button class="header-btn" id="loginBtn" onclick="openLogin()">👤 Login</button>
+    <button class="header-btn" id="wishlistBtn" onclick="openWishlist()" style="display:none">❤️ <span id="wishCount">0</span></button>
+    <button class="header-btn" id="ordersBtn" onclick="openOrders()" style="display:none">📦 Pesanan</button>
+    <button class="header-btn" onclick="toggleCart()">
+      🛒 <span class="cart-count" id="cartCount">0</span>
+    </button>
+    <button class="header-btn" id="logoutBtn" onclick="logout()" style="display:none">🚪 Keluar</button>
+  </div>
+</header>
+
+<!-- ===== TOOLBAR ===== -->
+<div class="toolbar">
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Cari produk..." oninput="renderProducts()">
+  </div>
+  <select class="filter-select" id="sortSelect" onchange="renderProducts()">
+    <option value="default">Urutkan: Default</option>
+    <option value="price-asc">Harga: Terendah</option>
+    <option value="price-desc">Harga: Tertinggi</option>
+    <option value="name-asc">Nama: A-Z</option>
+    <option value="rating-desc">Rating: Terbaik</option>
+  </select>
+</div>
+
+<!-- ===== CATEGORIES ===== -->
+<div class="categories" id="categories"></div>
+
+<!-- ===== PRODUCTS ===== -->
+<div class="products" id="productList"></div>
+
+<!-- ===== CART SIDEBAR ===== -->
+<div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+<div class="cart-sidebar" id="cartSidebar">
+  <div class="cart-header">
+    <h2>🛒 Keranjang Belanja</h2>
+    <button class="close-btn" onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer" id="cartFooter"></div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast">✅</div>
+
+<script>
+/* =========================================================
+   DATA
+========================================================= */
+const allProducts = [
+  { id: 1, name: "Headphone Bluetooth", price: 350000, oldPrice: 500000, icon: "🎧", category: "Elektronik", rating: 4.5, desc: "Headphone wireless dengan noise cancelling, baterai tahan 30 jam. Cocok untuk kerja & traveling." },
+  { id: 2, name: "Smartwatch Sport", price: 750000, oldPrice: 950000, icon: "⌚", category: "Elektronik", rating: 4.7, desc: "Smartwatch dengan GPS, heart rate monitor, dan tahan air. Desain sporty dan ringan." },
+  { id: 3, name: "Sneakers Casual", price: 450000, oldPrice: 0, icon: "👟", category: "Fashion", rating: 4.3, desc: "Sneakers nyaman untuk aktivitas harian, bahan premium dan ringan." },
+  { id: 4, name: "Kamera Mirrorless", price: 5500000, oldPrice: 6500000, icon: "📷", category: "Elektronik", rating: 4.9, desc: "Kamera mirrorless 24MP dengan video 4K. Ideal untuk content creator." },
+  { id: 5, name: "Speaker Portable", price: 280000, oldPrice: 0, icon: "🔊", category: "Elektronik", rating: 4.2, desc: "Speaker Bluetooth tahan air dengan suara bass yang powerful." },
+  { id: 6, name: "Laptop Gaming", price: 12000000, oldPrice: 14500000, icon: "💻", category: "Elektronik", rating: 4.8, desc: "Laptop gaming RTX 4060, RAM 16GB, SSD 512GB. Performa kencang untuk gaming & editing." },
+  { id: 7, name: "iPhone 18 Pro Max", price: 8500000, oldPrice: 9999000, icon: "📱", category: "Elektronik", rating: 4.6, desc: "Smartphone flagship dengan kamera 108MP dan baterai 5000mAh." },
+  { id: 8, name: "Tas Ransel", price: 200000, oldPrice: 0, icon: "🎒", category: "Fashion", rating: 4.1, desc: "Tas ransel anti air dengan banyak kompartemen. Cocok untuk sekolah & kerja." },
+  { id: 9, name: "Keyboard Mekanik", price: 650000, oldPrice: 0, icon: "⌨️", category: "Elektronik", rating: 4.4, desc: "Keyboard mekanik RGB dengan switch blue. Nyaman untuk mengetik & gaming." },
+  { id: 10, name: "Mouse Wireless", price: 150000, oldPrice: 200000, icon: "🖱️", category: "Elektronik", rating: 4.0, desc: "Mouse wireless ergonomis dengan sensor presisi tinggi." },
+  { id: 11, name: "Sepatu Running", price: 380000, oldPrice: 0, icon: "👞", category: "Fashion", rating: 4.5, desc: "Sepatu lari dengan teknologi cushioning untuk kenyamanan maksimal." },
+  { id: 12, name: "Topi Sporty", price: 90000, oldPrice: 0, icon: "🧢", category: "Fashion", rating: 3.9, desc: "Topi sporty bahan breathable, cocok untuk olahraga & santai." },
+  { id: 13, name: "Blender Portable", price: 320000, oldPrice: 0, icon: "🥤", category: "Rumah Tangga", rating: 4.3, desc: "Blender portable USB rechargeable, praktis dibawa ke mana saja." },
+  { id: 14, name: "Rice Cooker Mini", price: 450000, oldPrice: 550000, icon: "🍚", category: "Rumah Tangga", rating: 4.6, desc: "Rice cooker mini 1.2L dengan teknologi fuzzy logic." },
+  { id: 15, name: "Lampu LED Meja", price: 120000, oldPrice: 0, icon: "💡", category: "Rumah Tangga", rating: 4.2, desc: "Lampu meja LED dengan 3 mode pencahayaan, hemat energi." },
+  { id: 16, name: "Lord of the Mysteries", price: 85000, oldPrice: 0, icon: "📚", category: "Buku", rating: 4.8, desc: "Novel best seller yang wajib dibaca. Cerita seru & inspiratif." },
+  { id: 17, name: "Buku Resep Masakan", price: 75000, oldPrice: 95000, icon: "📖", category: "Buku", rating: 4.4, desc: "Kumpulan 100 resep masakan nusantara yang mudah dipraktikkan." },
+  { id: 18, name: "Action Figure Hero", price: 250000, oldPrice: 0, icon: "🦸", category: "Mainan", rating: 4.5, desc: "Action figure 30cm dengan detail premium dan 20 titik sendi." },
+  { id: 19, name: "Puzzle 1000 Pcs", price: 120000, oldPrice: 0, icon: "🧩", category: "Mainan", rating: 4.3, desc: "Puzzle 1000 keping gambar pemandangan, melatih kesabaran & fokus." },
+  { id: 20, name: "Boneka Lucu", price: 95000, oldPrice: 130000, icon: "🧸", category: "Mainan", rating: 4.7, desc: "Boneka beruang lucu ukuran 30cm, bahan halus & aman." },
+  { id: 21, name: "Omnicent Reader View Point", price: 150000, oldPrice: 0, icon: "📚", category: "Mainan", rating: 4.6, desc: "Kacamata pembaca dengan tampilan 3D, cocok untuk membaca & hiburan." },
+  { id: 22, name: "Macbook Pro M5 Chip", price: 55000000, oldPrice: 58000000, icon: "💻", category: "Elektronik", rating: 4.9, desc: "Laptop profesional dengan prosesor M5 chip terbaru." },
+  { id: 23, name: "Kursi kayu", price: 2200000, oldPrice: 2500000, icon: "🪑", category: "Furnitur", rating: 4.7, desc: "Kursi gaming ergonomis dengan desain modern dan bahan berkualitas." },
+  { id: 24, name: "Baju kaos", price: 120000, oldPrice: 0, icon: "👕", category: "Fashion", rating: 4.0, desc: "Baju kaos berkualitas tinggi, nyaman dipakai sehari-hari." }
+];
+
+/* =========================================================
+   STATE + STORAGE
+========================================================= */
+let cart = JSON.parse(localStorage.getItem('shopku_cart') || '[]');
+let wishlist = JSON.parse(localStorage.getItem('shopku_wishlist') || '[]');
+let user = JSON.parse(localStorage.getItem('shopku_user') || 'null');
+let orders = JSON.parse(localStorage.getItem('shopku_orders') || '[]');
+let activeCategory = 'Semua';
+let activeModal = null;
+
+const saveCart = () => localStorage.setItem('shopku_cart', JSON.stringify(cart));
+const saveWishlist = () => localStorage.setItem('shopku_wishlist', JSON.stringify(wishlist));
+const saveUser = () => localStorage.setItem('shopku_user', JSON.stringify(user));
+const saveOrders = () => localStorage.setItem('shopku_orders', JSON.stringify(orders));
+
+const formatRp = (n) => "Rp " + n.toLocaleString('id-ID');
+
+/* =========================================================
+   AUTH
+========================================================= */
+function openLogin() {
+  showModal(`
+    <div class="modal-header">
+      <h2>👤 Masuk / Daftar</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-switch">
+        <button id="tabLogin" class="active" onclick="switchTab('login')">Masuk</button>
+        <button id="tabRegister" onclick="switchTab('register')">Daftar</button>
+      </div>
+      <div id="loginForm">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="loginUser" placeholder="Masukkan username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPass" placeholder="Masukkan password">
+        </div>
+        <button class="btn-primary" onclick="doLogin()">Masuk</button>
+      </div>
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label>Nama Lengkap</label>
+          <input type="text" id="regName" placeholder="Nama kamu">
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="regUser" placeholder="Pilih username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="regPass" placeholder="Min. 4 karakter">
+        </div>
+        <button class="btn-primary" onclick="doRegister()">Daftar</button>
+      </div>
+    </div>
+  `);
+}
+
+function switchTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const username = document.getElementById('regUser').value.trim();
+  const pass = document.getElementById('regPass').value;
+
+  if (!name || !username || pass.length < 4) {
+    return showToast('Isi semua data, password min. 4 karakter!', true);
+  }
+
+  const users = JSON.parse(localStorage.getItem('shopku_users') || '[]');
+  if (users.find(u => u.username === username)) {
+    return showToast('Username sudah dipakai!', true);
+  }
+  users.push({ name, username, pass });
+  localStorage.setItem('shopku_users', JSON.stringify(users));
+
+  user = { name, username };
+  saveUser();
+  updateAuthUI();
+  closeModal();
+  showToast(`Selamat datang, ${name}! 🎉`);
+}
+
+function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+
+  const users = JSON.parse(localStorage.getItem('shopku_users') || '[]');
+  const found = users.find(u => u.username === username && u.pass === pass);
+
+  if (!found) return showToast('Username atau password salah!', true);
+
+  user = { name: found.name, username: found.username };
+  saveUser();
+  updateAuthUI();
+  closeModal();
+  showToast(`Halo lagi, ${user.name}! 👋`);
+}
+
+function logout() {
+  if (!confirm('Yakin ingin keluar?')) return;
+  user = null;
+  saveUser();
+  updateAuthUI();
+  showToast('Berhasil logout');
+}
+
+function updateAuthUI() {
+  const loginBtn = document.getElementById('loginBtn');
+  const userInfo = document.getElementById('userInfo');
+  const wishBtn = document.getElementById('wishlistBtn');
+  const ordersBtn = document.getElementById('ordersBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  if (user) {
+    loginBtn.style.display = 'none';
+    userInfo.style.display = 'flex';
+    wishBtn.style.display = 'inline-block';
+    ordersBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'inline-block';
+    document.getElementById('userName').textContent = user.name;
+  } else {
+    loginBtn.style.display = 'inline-block';
+    userInfo.style.display = 'none';
+    wishBtn.style.display = 'none';
+    ordersBtn.style.display = 'none';
+    logoutBtn.style.display = 'none';
+  }
+  document.getElementById('wishCount').textContent = wishlist.length;
+}
+
+/* =========================================================
+   CATEGORIES
+========================================================= */
+function renderCategories() {
+  const cats = ['Semua', ...new Set(allProducts.map(p => p.category))];
+  document.getElementById('categories').innerHTML = cats.map(c =>
+    `<button class="cat-btn ${c === activeCategory ? 'active' : ''}" onclick="setCategory('${c}')">${c}</button>`
+  ).join('');
+}
+
+function setCategory(cat) {
+  activeCategory = cat;
+  renderCategories();
+  renderProducts();
+}
+
+/* =========================================================
+   PRODUCTS
+========================================================= */
+function renderProducts() {
+  const keyword = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let filtered = allProducts.filter(p =>
+    (activeCategory === 'Semua' || p.category === activeCategory) &&
+    p.name.toLowerCase().includes(keyword)
+  );
+
+  if (sort === 'price-asc') filtered.sort((a,b) => a.price - b.price);
+  else if (sort === 'price-desc') filtered.sort((a,b) => b.price - a.price);
+  else if (sort === 'name-asc') filtered.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sort === 'rating-desc') filtered.sort((a,b) => b.rating - a.rating);
+
+  const list = document.getElementById('productList');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-products">😢 Produk tidak ditemukan</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => {
+    const discount = p.oldPrice > 0 ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+    const isWish = wishlist.includes(p.id);
+    return `
+      <div class="product-card" onclick="openProduct(${p.id})">
+        <div class="product-img">
+                    ${p.icon}
+          ${discount > 0 ? `<span class="badge-discount">-${discount}%</span>` : ''}
+          ${p.rating >= 4.7 ? '<span class="badge-new">⭐ TOP</span>' : ''}
+          <button class="heart-btn ${isWish ? 'active' : ''}" onclick="event.stopPropagation();toggleWishlist(${p.id})">
+            ${isWish ? '❤️' : '🤍'}
+          </button>
+        </div>
+        <div class="product-info">
+          <div class="product-category">${p.category}</div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-rating">⭐ ${p.rating} / 5.0</div>
+          <div class="product-price">${formatRp(p.price)}</div>
+          ${p.oldPrice > 0 ? `<div class="product-price-old">${formatRp(p.oldPrice)}</div>` : '<div style="height:18px"></div>'}
+          <button class="add-btn" onclick="event.stopPropagation();addToCart(${p.id})">+ Tambah</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* =========================================================
+   PRODUCT DETAIL MODAL
+========================================================= */
+function openProduct(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  const discount = p.oldPrice > 0 ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+  const isWish = wishlist.includes(p.id);
+
+  showModal(`
+    <div class="modal-header">
+      <h2>Detail Produk</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-img">${p.icon}</div>
+      <div class="detail-category">${p.category}</div>
+      <div class="detail-name">${p.name}</div>
+      <div class="product-rating" style="margin-bottom:10px">⭐ ${p.rating} / 5.0</div>
+      <div class="detail-price">
+        ${formatRp(p.price)}
+        ${discount > 0 ? `<span style="font-size:14px;color:#ff4757;margin-left:10px">-${discount}%</span>` : ''}
+      </div>
+      ${p.oldPrice > 0 ? `<div style="color:#999;text-decoration:line-through;margin-bottom:15px">${formatRp(p.oldPrice)}</div>` : ''}
+      <div class="detail-desc">${p.desc}</div>
+      <div class="detail-actions">
+        <button class="btn-primary" style="flex:1" onclick="addToCart(${p.id});closeModal()">🛒 Tambah ke Keranjang</button>
+        <button class="btn-secondary" style="flex:0 0 auto;width:60px;margin:0" onclick="toggleWishlist(${p.id});openProduct(${p.id})">
+          ${isWish ? '❤️' : '🤍'}
+        </button>
+      </div>
+    </div>
+  `);
+}
+
+/* =========================================================
+   WISHLIST
+========================================================= */
+function toggleWishlist(id) {
+  if (!user) {
+    showToast('Login dulu untuk wishlist!', true);
+    return openLogin();
+  }
+  const idx = wishlist.indexOf(id);
+  if (idx >= 0) {
+    wishlist.splice(idx, 1);
+    showToast('Dihapus dari wishlist');
+  } else {
+    wishlist.push(id);
+    showToast('❤️ Ditambahkan ke wishlist!');
+  }
+  saveWishlist();
+  document.getElementById('wishCount').textContent = wishlist.length;
+  renderProducts();
+}
+
+function openWishlist() {
+  const items = allProducts.filter(p => wishlist.includes(p.id));
+  showModal(`
+    <div class="modal-header">
+      <h2>❤️ Wishlist (${items.length})</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      ${items.length === 0 ? '<div class="empty-state">Wishlist masih kosong 🥺</div>' :
+        items.map(p => `
+          <div class="cart-item">
+            <div class="cart-item-icon">${p.icon}</div>
+            <div class="cart-item-info">
+              <div class="cart-item-name">${p.name}</div>
+              <div class="cart-item-price">${formatRp(p.price)}</div>
+              <div class="qty-controls">
+                <button class="qty-btn" style="width:auto;padding:0 10px;height:26px" onclick="addToCart(${p.id})">+ Keranjang</button>
+                <button class="remove-btn" onclick="toggleWishlist(${p.id});openWishlist()">Hapus</button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+    </div>
+  `);
+}
+
+/* =========================================================
+   CART
+========================================================= */
+function toggleCart() {
+  document.getElementById('cartSidebar').classList.toggle('active');
+  document.getElementById('cartOverlay').classList.toggle('active');
+}
+
+function addToCart(id) {
+  if (!user) {
+    showToast('Login dulu untuk belanja!', true);
+    return openLogin();
+  }
+  const product = allProducts.find(p => p.id === id);
+  const existing = cart.find(i => i.id === id);
+  if (existing) existing.qty++;
+  else cart.push({ ...product, qty: 1 });
+  saveCart();
+  updateCart();
+  showToast(`✅ ${product.name} ditambahkan!`);
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(i => i.id === id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+  saveCart();
+  updateCart();
+}
+
+function removeItem(id) {
+  cart = cart.filter(i => i.id !== id);
+  saveCart();
+  updateCart();
+}
+
+function updateCart() {
+  const cartItems = document.getElementById('cartItems');
+  const cartFooter = document.getElementById('cartFooter');
+  const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
+  document.getElementById('cartCount').textContent = totalItems;
+
+  if (cart.length === 0) {
+    cartItems.innerHTML = '<div class="empty-state">🛒<br><br>Keranjang masih kosong<br><small style="color:#bbb">Yuk mulai belanja!</small></div>';
+    cartFooter.innerHTML = '';
+    return;
+  }
+
+  cartItems.innerHTML = cart.map(item => `
+    <div class="cart-item">
+      <div class="cart-item-icon">${item.icon}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-price">${formatRp(item.price)} × ${item.qty}</div>
+        <div class="qty-controls">
+          <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+          <span>${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+          <button class="remove-btn" onclick="removeItem(${item.id})" style="margin-left:auto">Hapus</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const shipping = subtotal > 500000 ? 0 : 20000;
+  const total = subtotal + shipping;
+
+  cartFooter.innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:8px">
+      <span>Subtotal</span><span>${formatRp(subtotal)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:14px;color:#666;margin-bottom:12px">
+      <span>Ongkir ${shipping === 0 ? '(GRATIS 🎉)' : ''}</span><span>${formatRp(shipping)}</span>
+    </div>
+    <div class="total"><span>Total:</span><span>${formatRp(total)}</span></div>
+    <button class="checkout-btn" onclick="openCheckout()">Lanjut ke Pembayaran 💳</button>
+  `;
+}
+
+/* =========================================================
+   CHECKOUT
+========================================================= */
+function openCheckout() {
+  if (!user) return openLogin();
+  if (cart.length === 0) return showToast('Keranjang kosong!', true);
+
+  const subtotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const shipping = subtotal > 500000 ? 0 : 20000;
+  const total = subtotal + shipping;
+
+  showModal(`
+    <div class="modal-header">
+      <h2>💳 Checkout</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nama Penerima</label>
+        <input type="text" id="coName" value="${user.name}" placeholder="Nama lengkap">
+      </div>
+      <div class="form-group">
+        <label>No. Telepon</label>
+        <input type="tel" id="coPhone" placeholder="08xxxxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label>Alamat Lengkap</label>
+        <textarea id="coAddress" rows="3" placeholder="Jalan, No, RT/RW, Kelurahan, Kota..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Metode Pembayaran</label>
+        <select id="coPayment">
+          <option value="Transfer Bank">🏦 Transfer Bank</option>
+          <option value="COD">💰 COD (Bayar di Tempat)</option>
+          <option value="E-Wallet">📱 E-Wallet (GoPay/OVO/Dana)</option>
+          <option value="QRIS">📷 QRIS</option>
+        </select>
+      </div>
+      <div style="background:#f1f2f6;padding:15px;border-radius:10px;margin-bottom:15px">
+        <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px">
+          <span>Subtotal</span><span>${formatRp(subtotal)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px">
+          <span>Ongkir</span><span>${formatRp(shipping)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-weight:bold;color:#667eea;font-size:16px;border-top:1px solid #ddd;padding-top:8px">
+          <span>Total</span><span>${formatRp(total)}</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="doCheckout(${total})">Buat Pesanan 🎉</button>
+    </div>
+  `);
+}
+
+function doCheckout(total) {
+  const name = document.getElementById('coName').value.trim();
+  const phone = document.getElementById('coPhone').value.trim();
+  const address = document.getElementById('coAddress').value.trim();
+  const payment = document.getElementById('coPayment').value;
+
+  if (!name || !phone || !address) {
+    return showToast('Lengkapi semua data!', true);
+  }
+
+  const order = {
+    id: 'ORD' + Date.now(),
+    date: new Date().toISOString(),
+    items: [...cart],
+    total,
+    name, phone, address, payment,
+    status: 'Diproses'
+  };
+  orders.unshift(order);
+  saveOrders();
+
+  cart = [];
+  saveCart();
+  updateCart();
+  closeModal();
+  toggleCart();
+
+  showModal(`
+    <div class="modal-header">
+      <h2>🎉 Pesanan Berhasil!</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <div style="font-size:80px;margin-bottom:15px">✅</div>
+      <h3 style="margin-bottom:10px">Terima kasih, ${name}!</h3>
+      <p style="color:#666;margin-bottom:20px">Pesanan kamu sedang diproses.<br>ID: <b>${order.id}</b></p>
+      <div style="background:#f1f2f6;padding:15px;border-radius:10px;text-align:left;margin-bottom:15px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Total:</span><b>${formatRp(total)}</b></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Pembayaran:</span><b>${payment}</b></div>
+        <div style="display:flex;justify-content:space-between"><span>Status:</span><span class="order-status">Diproses</span></div>
+      </div>
+      <button class="btn-primary" onclick="closeModal();openOrders()">Lihat Pesanan Saya</button>
+    </div>
+  `);
+}
+
+/* =========================================================
+   ORDER HISTORY
+========================================================= */
+function openOrders() {
+  if (!user) return openLogin();
+  const userOrders = orders.filter(o => o.name === user.name);
+
+  showModal(`
+    <div class="modal-header">
+      <h2>📦 Pesanan Saya (${userOrders.length})</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      ${userOrders.length === 0 ? '<div class="empty-state">Belum ada pesanan 📭<br><small style="color:#bbb">Yuk mulai belanja!</small></div>' :
+        userOrders.map(o => {
+          const statusClass = o.status === 'Dibatalkan' ? 'cancelled' :
+                              o.status === 'Dikirim' ? 'shipped' :
+                              o.status === 'Selesai' ? 'completed' : '';
+          const canCancel = o.status === 'Diproses' || o.status === 'Dikemas';
+          const canConfirm = o.status === 'Dikirim';
+
+          return `
+            <div class="order-card">
+              <div class="order-header">
+                <span><b>${o.id}</b></span>
+                <span class="order-status ${statusClass}">${o.status}</span>
+              </div>
+              <div style="font-size:12px;color:#999;margin-bottom:10px">${new Date(o.date).toLocaleString('id-ID')}</div>
+              ${o.items.map(i => `<div class="order-item-line"><span>${i.icon} ${i.name} × ${i.qty}</span><span>${formatRp(i.price * i.qty)}</span></div>`).join('')}
+              <div class="order-total"><span>Total</span><span>${formatRp(o.total)}</span></div>
+              <div style="font-size:12px;color:#666;margin-top:8px">💳 ${o.payment} · 📍 ${o.address}</div>
+
+              <div class="order-actions">
+                ${o.status !== 'Dibatalkan' && o.status !== 'Selesai' ? 
+                  `<button class="order-action-btn btn-track" onclick="trackOrder('${o.id}')">🚚 Lacak</button>` : ''}
+                ${canCancel ? 
+                  `<button class="order-action-btn btn-cancel" onclick="cancelOrder('${o.id}')">✕ Batalkan</button>` : ''}
+                ${canConfirm ? 
+                  `<button class="order-action-btn btn-confirm" onclick="confirmOrder('${o.id}')">✓ Terima</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+    </div>
+  `);
+}
+/* =========================================================
+   CANCEL ORDER
+========================================================= */
+function cancelOrder(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  if (order.status !== 'Diproses' && order.status !== 'Dikemas') {
+    return showToast('Pesanan tidak bisa dibatalkan!', true);
+  }
+
+  // Konfirmasi dengan alasan
+  showModal(`
+    <div class="modal-header">
+      <h2>❌ Batalkan Pesanan</h2>
+      <button class="modal-close" onclick="openOrders()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:#666;margin-bottom:15px">
+        Yakin ingin membatalkan pesanan <b>${order.id}</b> senilai <b>${formatRp(order.total)}</b>?
+      </p>
+      <div class="form-group">
+        <label>Alasan Pembatalan</label>
+        <select id="cancelReason">
+          <option value="Berubah pikiran">Berubah pikiran</option>
+          <option value="Salah pesan produk">Salah pesan produk</option>
+          <option value="Ingin ganti metode bayar">Ingin ganti metode bayar</option>
+          <option value="Alamat salah">Alamat salah</option>
+          <option value="Lainnya">Lainnya</option>
+        </select>
+      </div>
+      <button class="btn-primary" style="background:linear-gradient(135deg,#ff4757,#ff6b81)" onclick="confirmCancel('${order.id}')">
+        Ya, Batalkan Pesanan
+      </button>
+      <button class="btn-secondary" onclick="openOrders()">Kembali</button>
+    </div>
+  `);
+}
+
+function confirmCancel(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const reason = document.getElementById('cancelReason').value;
+  order.status = 'Dibatalkan';
+  order.cancelReason = reason;
+  order.cancelledAt = new Date().toISOString();
+  saveOrders();
+
+  closeModal();
+  showToast('✅ Pesanan berhasil dibatalkan');
+  setTimeout(openOrders, 300);
+}
+
+/* =========================================================
+   CONFIRM ORDER (Terima barang)
+========================================================= */
+function confirmOrder(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  if (!confirm(`Konfirmasi bahwa kamu sudah menerima pesanan ${order.id}?`)) return;
+
+  order.status = 'Selesai';
+  order.completedAt = new Date().toISOString();
+  saveOrders();
+
+  showToast('🎉 Terima kasih! Pesanan selesai');
+  setTimeout(openOrders, 300);
+}
+
+/* =========================================================
+   TRACK ORDER (Timeline)
+========================================================= */
+function trackOrder(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const steps = ['Diproses', 'Dikemas', 'Dikirim', 'Selesai'];
+  const currentIdx = order.status === 'Dibatalkan' ? -1 : steps.indexOf(order.status);
+
+  showModal(`
+    <div class="modal-header">
+      <h2>🚚 Lacak Pesanan</h2>
+      <button class="modal-close" onclick="openOrders()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#f1f2f6;padding:12px;border-radius:10px;margin-bottom:15px">
+        <div style="font-size:13px;color:#666;margin-bottom:5px">ID Pesanan</div>
+        <div style="font-weight:bold">${order.id}</div>
+      </div>
+
+      ${order.status === 'Dibatalkan' ? `
+        <div style="background:#ffe0e5;padding:15px;border-radius:10px;text-align:center">
+          <div style="font-size:40px;margin-bottom:8px">❌</div>
+          <b style="color:#ff4757">Pesanan Dibatalkan</b>
+          <div style="font-size:13px;color:#666;margin-top:8px">
+            Alasan: ${order.cancelReason || 'Tidak ada alasan'}
+          </div>
+        </div>
+      ` : `
+        <div class="timeline">
+          ${steps.map((s, i) => {
+            const cls = i < currentIdx ? 'done' : i === currentIdx ? 'current' : '';
+            return `<div class="timeline-step ${cls}">${s}</div>`;
+          }).join('')}
+        </div>
+      `}
+
+      <div style="font-size:12px;color:#999;margin-top:15px">
+        Dibuat: ${new Date(order.date).toLocaleString('id-ID')}
+        ${order.cancelledAt ? `<br>Dibatalkan: ${new Date(order.cancelledAt).toLocaleString('id-ID')}` : ''}
+        ${order.completedAt ? `<br>Selesai: ${new Date(order.completedAt).toLocaleString('id-ID')}` : ''}
+      </div>
+    </div>
+  `);
+}
+
+/* =========================================================
+   MODAL HELPERS
+========================================================= */
+function showModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+/* =========================================================
+   TOAST
+========================================================= */
+function showToast(msg, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.toggle('error', isError);
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+renderCategories();
+renderProducts();
+updateCart();
+updateAuthUI();
+</script>
+
+</body>
+</html>
